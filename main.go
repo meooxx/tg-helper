@@ -10,7 +10,6 @@ import (
 	"time"
 )
 
-
 const (
 	MENTION      = "mention"
 	BOT_COMMAND  = "bot_command"
@@ -159,7 +158,7 @@ func handleUpdate(w http.ResponseWriter, r *http.Request) {
 type ApiModel struct {
 	Token  string
 	Url    string
-	Method string   // tg method eg.getMem, sendMessage...
+	Method string // tg method eg.getMem, sendMessage...
 }
 
 // send a message should set these field
@@ -207,10 +206,17 @@ func parseEntities(entities []MessageEntity, msg Message) map[string]*MentionedA
 			len := entity.Length
 			offset := entity.Offset
 			userName := string([]rune(msg.Text)[offset : len+offset])
-			e[COMMAND_KICKOFF].Mentioned = entity.User
-			e[COMMAND_KICKOFF].UserName = userName
+			// 处理 /kickof@bot sb 这种形式的
+			if preCommand, ok := e[COMMAND_KICKOFF]; ok {
+				preCommand.Mentioned = entity.User
+				preCommand.UserName = userName
+			} else if preCommand, ok = e[fmt.Sprintf("%s%s", COMMAND_KICKOFF, AT_MYSELF)]; ok {
+				preCommand.Mentioned = entity.User
+				preCommand.UserName = userName
+			}
+		default:
+			fmt.Println("invalid command")
 		}
-
 	}
 	return e
 }
