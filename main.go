@@ -130,18 +130,26 @@ func handleUpdate(w http.ResponseWriter, r *http.Request) {
 		case AT_MYSELF:
 			text := fmt.Sprintf("@我干嘛, 需要帮助请@群主或者输入'/'\n[@%s](tg://user?id=%d)", relateUser.From.FirstName, relateUser.From.Id)
 			sendTgMessage(apiModel, text, chat.Id)
+		// /repo@github_release_bot 这种形式
+		case fmt.Sprintf("%s%s", COMMAND_REPO, AT_MYSELF):
+			fallthrough
 		case COMMAND_REPO:
 			res := sendTgMessage(apiModel, fmt.Sprintf("[%s](%s)\n 为了防止信息太频繁此消息%ds后删除", REPO, REPO, 30), chat.Id)
 			// x 秒后删除此信息
 			peddingDeleteMsg <- MessageAndChatId{chat.Id, res.Result.MessageId, apiModel, 30}
+		case fmt.Sprintf("%s%s", COMMAND_HELP, AT_MYSELF):
+			fallthrough
 		case COMMAND_HELP:
 			sendTgMessage(apiModel, fmt.Sprintf("%s 获取仓库地址\n%s 踢人请@群主", COMMAND_REPO, COMMAND_KICKOFF), chat.Id)
+		case fmt.Sprintf("%s%s", COMMAND_KICKOFF, AT_MYSELF):
+			fallthrough
 		case COMMAND_KICKOFF:
 			// 发送踢人指令的人是否有管理员权限
 			if checkKickPermission(apiModel, update.Message.From.Id, chat.Id) {
 				deleteMember(apiModel, relateUser.Mentioned.Id, chat.Id, update.Message.From.FirstName)
 			}
 		default:
+			fmt.Print(parsedEnityKey)
 			fmt.Println("无效的update")
 		}
 
