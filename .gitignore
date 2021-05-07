@@ -1,0 +1,12 @@
+.theia
+.vscode
+.gcloudignore
+__debug_bin
+.DS_STORE
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.log
