@@ -10,3 +10,4 @@ __debug_bin
 *.dylib
 *.test
 *.log
+config.*
