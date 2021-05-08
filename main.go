@@ -70,6 +70,8 @@ type Update struct {
 	UpdateID int64 `json:"update_id"`
 	// ChatMember ChatMemberUpdated `json:"chat_member"`
 	Message Message `json:"message"`
+	// 编辑过的 message
+	EditedMessage Message `json:"edited_message"`
 }
 
 // path "/" handler
@@ -102,7 +104,10 @@ func handleUpdate(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		panic(err)
 	}
-
+	// 如果有 edited_message 当作 messsage 处理
+	if update.EditedMessage.MessageId != 0 {
+		update.Message = update.EditedMessage
+	}
 	newUsers := update.Message.NewChatMembers
 	chat := update.Message.Chat
 	entities := update.Message.Entities
@@ -140,12 +145,10 @@ func handleUpdate(w http.ResponseWriter, r *http.Request) {
 			fallthrough
 		case COMMAND_HELP:
 			sendTgMessage(apiModel, fmt.Sprintf("%s 获取仓库地址\n%s 踢人请@群主", COMMAND_REPO, COMMAND_KICKOFF), chat.Id)
-		case fmt.Sprintf("%s%s", COMMAND_KICKOFF, AT_MYSELF):
-			fallthrough
 		case COMMAND_KICKOFF:
 			// 发送踢人指令的人是否有管理员权限
 			if checkKickPermission(apiModel, update.Message.From.Id, chat.Id) {
-				deleteMember(apiModel, relateUser.Mentioned.Id, chat.Id, update.Message.From.FirstName)
+				deleteMember(apiModel, relateUser.Mentioned.Id, chat.Id)
 			}
 		default:
 			fmt.Print(parsedEnityKey)
@@ -188,34 +191,34 @@ type MessageAndChatId struct {
 // 只有删除 用户的时候 会有 from 和 user
 func parseEntities(entities []MessageEntity, msg Message) map[string]*MentionedAndFrom {
 	e := map[string]*MentionedAndFrom{}
+	var textMentioned *MentionedAndFrom
 	for _, entity := range entities {
+		len := entity.Length
+		offset := entity.Offset
 		switch entity.Type {
 		case BOT_COMMAND:
-			fallthrough
-		case MENTION:
-			len := entity.Length
-			offset := entity.Offset
 			// 处理汉字 转成 rune 再转成 string
 			entityName := string([]rune(msg.Text)[offset : len+offset])
 			e[entityName] = &MentionedAndFrom{entity.User, msg.From, ""}
-		// 踢人时候使用 /kickoff sombody
-		// 第一次会被 BOT_COMMAND 匹配到 /kickoff
-		// 第二次会被 TEXT_MENTION 匹配到 sombody
-		// 所以第二次直接修改已经存储的信息
+		case MENTION:
+			// 处理汉字 转成 rune 再转成 string
+			// entityName := string([]rune(msg.Text)[offset : len+offset])
+			e[AT_MYSELF] = &MentionedAndFrom{entity.User, msg.From, ""}
+			if textMentioned != nil {
+				textMentioned.From = msg.From
+				e[COMMAND_KICKOFF] = textMentioned
+				delete(e, AT_MYSELF)
+			}
 		case TEXT_MENTION:
-			len := entity.Length
-			offset := entity.Offset
 			userName := string([]rune(msg.Text)[offset : len+offset])
-			// 处理 /kickof@bot sb 这种形式的
-			if preCommand, ok := e[COMMAND_KICKOFF]; ok {
-				preCommand.Mentioned = entity.User
-				preCommand.UserName = userName
-			} else if preCommand, ok = e[fmt.Sprintf("%s%s", COMMAND_KICKOFF, AT_MYSELF)]; ok {
-				preCommand.Mentioned = entity.User
-				preCommand.UserName = userName
+			if _, ok := e[AT_MYSELF]; ok {
+				e[COMMAND_KICKOFF] = &MentionedAndFrom{entity.User, msg.From, userName}
+				delete(e, AT_MYSELF)
+			} else {
+				textMentioned = &MentionedAndFrom{entity.User, msg.From, userName}
 			}
 		default:
-			fmt.Println("invalid command")
+			fmt.Printf("invalid command:%v", entity)
 		}
 	}
 	return e
@@ -247,7 +250,7 @@ func checkKickPermission(api ApiModel, userId, chatId int64) bool {
 }
 
 // 剔除用户从群组
-func deleteMember(api ApiModel, userId, chatId int64, firstName string) {
+func deleteMember(api ApiModel, userId, chatId int64) {
 	api.Method = "kickChatMember"
 	params, _ := json.Marshal(map[string]int64{"user_id": userId, "chat_id": chatId})
 	req, _ := http.NewRequest("POST", fmt.Sprintf("%s%s/%s", api.Url, api.Token, api.Method), bytes.NewBuffer(params))
@@ -317,6 +320,7 @@ func main() {
 	go deleteAfterFewDuration()
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
+
 // 延迟一段时间后删除 channel 里面的信息
 func deleteAfterFewDuration() {
 	for {
