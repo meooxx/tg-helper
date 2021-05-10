@@ -15,10 +15,15 @@ jobs:
         uses: actions/checkout@v2
       - name: set up config.env
         env: 
-          CONFIG_ENV: ${{format('token={0}\nchatId={1}', secrets.TG_TOKEN, secrets.TG_CHAT_ID)}}
-        run: echo "$CONFIG_ENV" >> config.env
+          TOKEN: ${{format('token={0}', secrets.TG_TOKEN)}}
+          CHAT_ID: ${{format('chatId={1}', secrets.TG_CHAT_ID)}} 
+        run: |
+          echo "$TOKEN" > config.env
+          echo "$CHAT_ID" > config.env
       - name: ls 
-        run: pwd && ls -alt ./
+        run: |
+          pwd 
+          ls -alt ./
       - name: cat
         run: cat ./config.env
     
