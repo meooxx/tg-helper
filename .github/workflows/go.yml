@@ -18,8 +18,8 @@ jobs:
           TOKEN: ${{format('token={0}', secrets.TG_TOKEN)}}
           CHAT_ID: ${{format('chatId={0}', secrets.TG_CHAT_ID)}} 
         run: |
-          echo "$TOKEN" > config.env
-          echo "$CHAT_ID" > config.env
+          echo "$TOKEN" >> config.env
+          echo "$CHAT_ID" >> config.env
       - name: ls 
         run: |
           pwd 
