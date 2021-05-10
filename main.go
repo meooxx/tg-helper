@@ -389,10 +389,11 @@ func RunScheduleJob() {
 		// 切到明天
 		default:
 			nextBase := j.Base.Add(1 * time.Hour * 24)
-			j = &Job{}
+			*j = Job{}
 			j.Base = nextBase
+			j.StartOfDay = nextBase.Add(7 * time.Hour)
+			j.At = j.StartOfDay
 		}
-		log.Println("Next run job time:", j.At.String())
 		return j
 	}
 
@@ -452,22 +453,26 @@ func RunScheduleJob() {
 	startTime := t.Add(7 * time.Hour)
 	deadlineTime := t.Add(17 * time.Hour)
 	var job Job
+	job.Base = t
 	// next day
 	if now.After(deadlineTime) {
 		t = t.Add(1 * time.Hour * 24)
 		job.Base = t
 	} else if now.After(startTime) {
-		job.Base = t
 		job.StartOfDay = startTime
 	}
-
 	go func() {
-		<-ticker.C
-		if job.At.IsZero() {
-			SetNextRunTime(&job)
-		}
-		if time.Now().After(job.At) {
-			SpyOnJdMiaosha()
+		for {
+			<-ticker.C
+			if job.At.IsZero() {
+				SetNextRunTime(&job)
+				log.Println("Next run time:", job.At.String())
+			}
+			if time.Now().After(job.At) {
+				// _ = SpyOnJdMiaosha
+				SpyOnJdMiaosha()
+				job.At = time.Time{}
+			}
 		}
 	}()
 }
