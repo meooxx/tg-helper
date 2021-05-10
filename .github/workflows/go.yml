@@ -18,7 +18,7 @@ jobs:
           CONFIG_ENV: ${{format('token={0}\nchatId={1}', secrets.TG_TOKEN, secrets.TG_CHAT_ID)}}
         run: echo "$CONFIG_ENV" >> config.env
       - name: ls 
-        run: pwd && ls ./
+        run: pwd && ls -alt ./
       - name: Deploy to App Engine
         id: deploy
         uses: google-github-actions/deploy-appengine@v0.2.0
