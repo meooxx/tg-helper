@@ -16,7 +16,7 @@ jobs:
       - name: set up config.env
         env: 
           TOKEN: ${{format('token={0}', secrets.TG_TOKEN)}}
-          CHAT_ID: ${{format('chatId={1}', secrets.TG_CHAT_ID)}} 
+          CHAT_ID: ${{format('chatId={0}', secrets.TG_CHAT_ID)}} 
         run: |
           echo "$TOKEN" > config.env
           echo "$CHAT_ID" > config.env
