@@ -17,12 +17,5 @@ jobs:
         env: 
           CONFIG_ENV: ${{format('token={0}\nchatId={1}', secrets.TG_TOKEN, secrets.TG_CHAT_ID)}}
         run: echo "$CONFIG_ENV" >> config.env
-      - name: Deploy to App Engine
-        id: deploy
-        uses: google-github-actions/deploy-appengine@v0.2.0
-        with:
-          project_id: ${{ secrets.GAE_PROJECT_ID }}
-          credentials: ${{ secrets.GAE_PRIVATE_KEY }}
-
-      - name: Show Output
-        run: echo ${{ steps.deploy.outputs.url }}
+      - name: ls 
+        run: pwd && ls ./
