@@ -8,7 +8,6 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -476,7 +475,7 @@ var authInfo struct {
 }
 
 func init() {
-	data, err := os.ReadFile("config.env")
+	data, err := ioutil.ReadFile("config.env")
 	if err != nil {
 		fmt.Println("read config error", err)
 	}
