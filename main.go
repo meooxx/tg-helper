@@ -7,6 +7,10 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
+	"os"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -25,7 +29,8 @@ const (
 	// 创建者
 	CREATOR = "creator"
 	// 管理员
-	ADMIN = "administrator"
+	ADMIN  = "administrator"
+	TG_API = "https://api.telegram.org/bot"
 )
 
 type User struct {
@@ -115,7 +120,7 @@ func handleUpdate(w http.ResponseWriter, r *http.Request) {
 	if token == "" {
 		panic(fmt.Errorf("no token"))
 	}
-	apiModel := ApiModel{Url: "https://api.telegram.org/bot", Token: token}
+	apiModel := ApiModel{Url: TG_API, Token: token}
 
 	var metionNames string
 	for _, user := range newUsers {
@@ -302,7 +307,6 @@ func sendTgMessage(api ApiModel, text string, chatId int64) SendMessageResult {
 	if err != nil {
 		fmt.Printf("%v", err)
 	}
-	fmt.Printf("%s", by)
 	defer res.Body.Close()
 	return snr
 }
@@ -312,12 +316,191 @@ func clientWithWrapper() *http.Client {
 	return &http.Client{Timeout: 5 * time.Second, Transport: &http.Transport{Proxy: http.ProxyFromEnvironment}}
 }
 
+// jd miaosha response type
+type Group struct {
+	Gid       uint8  `json:"gid"`
+	GroupTime string `json:"groupTime"`
+}
+type Miaosha struct {
+	ShortWname string `json:"shortWname"`
+	WareId     string `json:"wareId"`
+	// imageurl      string
+	JdPrice         string `json:"jdPrice"`
+	MiaoShaPrice    string `json:"miaoShaPrice"`
+	StartTimeShow   string `json:"startTimeShow"`
+}
+type MiaoshaListJson struct {
+	Groups      []Group   `json:"groups"`
+	MiaoShaList []Miaosha `json:"miaoShaList"`
+	Gid         string    `json:"gid"`
+}
+
+func getMiaoshaList(gid uint8) MiaoshaListJson {
+	v := url.Values{}
+	v.Add("appid", "o2_channels")
+	v.Add("functionId", "pcMiaoShaAreaList")
+	v.Add("client", "pc")
+	v.Add("clientVersion", "1.0.0")
+	v.Add("callback", "pcMiaoShaAreaList")
+	v.Add("jsonp", "pcMiaoShaAreaList")
+	if gid == 0 {
+		v.Add("body", "{}")
+	} else {
+		v.Add("body", fmt.Sprintf("{gid:%d}", gid))
+	}
+	v.Add("_", fmt.Sprint(time.Now().Unix()))
+	q := v.Encode()
+	req, _ := http.NewRequest("GET", fmt.Sprintf("https://api.m.jd.com/api?%s", q), nil)
+	req.Header.Add("referer", "https://miaosha.jd.com/")
+	req.Header.Add("user-agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.93 Safari/537.36")
+	client := clientWithWrapper()
+	res, err := client.Do(req)
+	if err != nil {
+		fmt.Println("秒杀请求失败")
+	}
+	defer res.Body.Close()
+	body, _ := ioutil.ReadAll(res.Body)
+	// fn({}); -> {}
+	body = body[len("pcMiaoShaAreaList")+1 : len(body)-2]
+	var msList MiaoshaListJson
+	_ = json.Unmarshal(body, &msList)
+	return msList
+}
+
+func runScheduleJob() {
+	ticker := time.NewTicker(30 * time.Minute)
+	//ticker := time.NewTicker(5 * time.Second)
+	// fmt.Println("修改正确的ticker")
+	type Job struct {
+		Base       time.Time
+		StartOfDay time.Time
+		EndOfDay   time.Time
+		At         time.Time
+	}
+
+	SetNextRunTime := func(j *Job) *Job {
+		switch {
+		// 今天第一次为空
+		case j.StartOfDay.IsZero():
+			j.At = j.Base.Add(7 * time.Hour)
+		// 今天第二次为空
+		case j.EndOfDay.IsZero():
+			j.EndOfDay = j.Base.Add(17 * time.Hour)
+			j.At = j.EndOfDay
+		// 切到明天
+		default:
+			nextBase := j.Base.Add(1 * time.Hour * 24)
+			j = &Job{}
+			j.Base = nextBase
+		}
+		fmt.Println("Next run job time:", j.At.String())
+		return j
+	}
+
+	// 监控秒杀信息
+	SpyOnJdMiaosha := func() {
+		defer func() {
+			if ok := recover(); ok != nil {
+				fmt.Println("recover from schedule job:", ok)
+			}
+		}()
+		// 过滤 5折 或者低于 15块 的商品
+		FilterGoods := func(l []Miaosha, maxPrice float64, minDisCount float64) []Miaosha {
+			var r []Miaosha
+			for _, good := range l {
+				jdPrice, _ := strconv.ParseFloat(good.MiaoShaPrice, 32)
+				originPrice, _ := strconv.ParseFloat(good.JdPrice, 32)
+				discount := jdPrice / originPrice
+				if jdPrice < maxPrice || discount < minDisCount {
+					r = append(r, good)
+				}
+			}
+			return r
+		}
+		miaosha := getMiaoshaList(0)
+		groupSku := []Miaosha{}
+
+		goodsList := FilterGoods(miaosha.MiaoShaList, 15, 0.2)
+		groupSku = append(groupSku, goodsList...)
+		for _, g := range miaosha.Groups {
+			if fmt.Sprint(g.Gid) != miaosha.Gid {
+				miaosha = getMiaoshaList(g.Gid)
+				goodsList = FilterGoods(miaosha.MiaoShaList, 15, 0.2)
+				groupSku = append(groupSku, goodsList...)
+			}
+			time.Sleep(1 * time.Second)
+		}
+		apiModel := ApiModel{authInfo.Token, TG_API, "sendMessage"}
+		text := "兄弟们,冲优惠2折和15元以下商品\n"
+		for _, item := range groupSku {
+			// markdown 转译. \., golang 转译 \\.
+			itemUrl := fmt.Sprintf("item\\.jd\\.com/%s\\.html", item.WareId)
+			escapedPrice := strings.Replace(item.MiaoShaPrice, ".", "\\.", 1)
+			// [18:00]xxx商品-价格-sku
+			text += fmt.Sprintf("[\\[%s\\]%s\\-%s元\\-%s](%s)\n", item.StartTimeShow, item.ShortWname, itemUrl, escapedPrice, item.WareId)
+		}
+		sendTgMessage(apiModel, text, authInfo.ChatId)
+	}
+
+	// set up job
+	now := time.Now()
+	t := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.Local)
+	// 一天俩次请求  7 点和 17 点
+	startTime := t.Add(7 * time.Hour)
+	deadlineTime := t.Add(17 * time.Hour)
+	var job Job
+	// next day
+	if now.After(deadlineTime) {
+		t = t.Add(1 * time.Hour * 24)
+		job.Base = t
+	} else if now.After(startTime) {
+		job.Base = t
+		job.StartOfDay = startTime
+	}
+
+	go func() {
+		<-ticker.C
+		SetNextRunTime(&job)
+		// if time.Now().After(job.At) {
+		if true {
+			SpyOnJdMiaosha()
+		}
+	}()
+}
+
+// 待删除的 msg 请求参数
 var peddingDeleteMsg = make(chan MessageAndChatId)
+var authInfo struct {
+	Token  string
+	ChatId int64
+}
+
+func init() {
+	data, err := os.ReadFile("config.env")
+	if err != nil {
+		fmt.Println("read config error", err)
+	}
+	// a=b \n c=d
+	// ["a=b", "c=d"]
+	tb := bytes.Fields(data)
+	m := map[string][]byte{}
+	for _, field := range tb {
+		keyValue := bytes.Split(field, []byte("="))
+		m[string(keyValue[0])] = keyValue[1]
+	}
+	authInfo.Token = string(m["token"])
+	chatId, _ := strconv.ParseInt(string(m["chatId"]), 10, 64)
+	authInfo.ChatId = chatId
+	fmt.Println(authInfo)
+}
 
 func main() {
 	http.HandleFunc("/update", handleUpdate)
 	http.HandleFunc("/", handler)
+	// 异步删除消息函数
 	go deleteAfterFewDuration()
+	// 定期去查 秒杀商品
+	go runScheduleJob()
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 

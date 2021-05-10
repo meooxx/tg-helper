@@ -2,7 +2,7 @@ name: Go
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master, dev ]
   pull_request:
     branches: [ master ]
 
@@ -13,7 +13,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-
+      - name: set up config.env
+        env: 
+          CONFIG_ENV: ${{format('token={0}\nchatId={1}', secrets.TG_TOKEN, secrets.TG_CHAT_ID)}}
+        run: echo "$CONFIG_ENV" >> config.env
       - name: Deploy to App Engine
         id: deploy
         uses: google-github-actions/deploy-appengine@v0.2.0
