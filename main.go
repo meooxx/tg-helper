@@ -81,7 +81,7 @@ type Update struct {
 // path "/" handler
 func handler(w http.ResponseWriter, r *http.Request) {
 	updateID := r.URL.Query().Get("update_id")
-	fmt.Println(updateID)
+	log.Println(updateID)
 	w.Write([]byte("hello!"))
 }
 
@@ -100,7 +100,7 @@ func handleUpdate(w http.ResponseWriter, r *http.Request) {
 	}
 	defer func() {
 		if r := recover(); r != nil {
-			fmt.Printf("Recovering from panic error is: %v \n", r)
+			log.Printf("Recovering from panic error is: %v \n", r)
 		}
 	}()
 	var update Update
@@ -155,8 +155,8 @@ func handleUpdate(w http.ResponseWriter, r *http.Request) {
 				deleteMember(apiModel, relateUser.Mentioned.Id, chat.Id)
 			}
 		default:
-			fmt.Print(parsedEnityKey)
-			fmt.Println("无效的update")
+			log.Print(parsedEnityKey)
+			log.Println("无效的update")
 		}
 
 	}
@@ -222,7 +222,7 @@ func parseEntities(entities []MessageEntity, msg Message) map[string]*MentionedA
 				textMentioned = &MentionedAndFrom{entity.User, msg.From, userName}
 			}
 		default:
-			fmt.Printf("invalid command:%v", entity)
+			log.Printf("invalid command:%v", entity)
 		}
 	}
 	return e
@@ -237,14 +237,14 @@ func checkKickPermission(api ApiModel, userId, chatId int64) bool {
 	client := clientWithWrapper()
 	res, err := client.Do(req)
 	if err != nil {
-		fmt.Printf("checkPermission request:%s", err)
+		log.Printf("checkPermission request:%s", err)
 	}
 	by, _ := ioutil.ReadAll(res.Body)
 	var j struct {
 		ok     bool
 		Result ChatMember `json:"result"`
 	}
-	fmt.Printf("%s", by)
+	log.Printf("%s", by)
 	json.Unmarshal(by, &j)
 	// 是创建者或者 admin 且 有踢人权限
 	if j.Result.Status == CREATOR || (j.Result.Status == ADMIN && j.Result.CanRestrictMembers) {
@@ -262,7 +262,7 @@ func deleteMember(api ApiModel, userId, chatId int64) {
 	client := clientWithWrapper()
 	res, err := client.Do(req)
 	if err != nil {
-		fmt.Printf("%s", err)
+		log.Printf("%s", err)
 	}
 	defer res.Body.Close()
 }
@@ -284,27 +284,27 @@ func sendTgMessage(api ApiModel, text string, chatId int64) SendMessageResult {
 	param := SendMessageParam{ChatId: chatId, Text: text, ParseMode: "MarkdownV2"}
 	jsonByte, err := json.Marshal(param)
 	if err != nil {
-		fmt.Printf("SendMessageParam stringify: %s", err)
+		log.Printf("SendMessageParam stringify: %s", err)
 		return SendMessageResult{}
 	}
 	req, err := http.NewRequest("POST", fmt.Sprintf("%s%s/%s", api.Url, api.Token, api.Method), bytes.NewBuffer(jsonByte))
 
 	if err != nil {
-		fmt.Printf("greet request:%s", err)
+		log.Printf("greet request:%s", err)
 		return SendMessageResult{}
 	}
 	req.Header.Set("Content-Type", "application/json")
 	client := clientWithWrapper()
 	res, err := client.Do(req)
 	if err != nil {
-		fmt.Printf("do request: %s", err)
+		log.Printf("do request: %s", err)
 		return SendMessageResult{}
 	}
 	var snr SendMessageResult
 	by, _ := ioutil.ReadAll(res.Body)
 	err = json.Unmarshal(by, &snr)
 	if err != nil {
-		fmt.Printf("%v", err)
+		log.Printf("%v", err)
 	}
 	defer res.Body.Close()
 	return snr
@@ -324,9 +324,9 @@ type Miaosha struct {
 	ShortWname string `json:"shortWname"`
 	WareId     string `json:"wareId"`
 	// imageurl      string
-	JdPrice         string `json:"jdPrice"`
-	MiaoShaPrice    string `json:"miaoShaPrice"`
-	StartTimeShow   string `json:"startTimeShow"`
+	JdPrice       string `json:"jdPrice"`
+	MiaoShaPrice  string `json:"miaoShaPrice"`
+	StartTimeShow string `json:"startTimeShow"`
 }
 type MiaoshaListJson struct {
 	Groups      []Group   `json:"groups"`
@@ -355,7 +355,7 @@ func getMiaoshaList(gid uint8) MiaoshaListJson {
 	client := clientWithWrapper()
 	res, err := client.Do(req)
 	if err != nil {
-		fmt.Println("秒杀请求失败")
+		log.Println("秒杀请求失败")
 	}
 	defer res.Body.Close()
 	body, _ := ioutil.ReadAll(res.Body)
@@ -366,10 +366,9 @@ func getMiaoshaList(gid uint8) MiaoshaListJson {
 	return msList
 }
 
-func runScheduleJob() {
+func RunScheduleJob() {
 	ticker := time.NewTicker(30 * time.Minute)
 	//ticker := time.NewTicker(5 * time.Second)
-	// fmt.Println("修改正确的ticker")
 	type Job struct {
 		Base       time.Time
 		StartOfDay time.Time
@@ -381,7 +380,8 @@ func runScheduleJob() {
 		switch {
 		// 今天第一次为空
 		case j.StartOfDay.IsZero():
-			j.At = j.Base.Add(7 * time.Hour)
+			j.StartOfDay = j.Base.Add(7 * time.Hour)
+			j.At = j.StartOfDay
 		// 今天第二次为空
 		case j.EndOfDay.IsZero():
 			j.EndOfDay = j.Base.Add(17 * time.Hour)
@@ -392,7 +392,7 @@ func runScheduleJob() {
 			j = &Job{}
 			j.Base = nextBase
 		}
-		fmt.Println("Next run job time:", j.At.String())
+		log.Println("Next run job time:", j.At.String())
 		return j
 	}
 
@@ -400,7 +400,7 @@ func runScheduleJob() {
 	SpyOnJdMiaosha := func() {
 		defer func() {
 			if ok := recover(); ok != nil {
-				fmt.Println("recover from schedule job:", ok)
+				log.Println("recover from schedule job:", ok)
 			}
 		}()
 		// 过滤 5折 或者低于 15块 的商品
@@ -430,7 +430,7 @@ func runScheduleJob() {
 			time.Sleep(1 * time.Second)
 		}
 		if len(groupSku) == 0 {
-			fmt.Println("没有找到合适的商品")
+			log.Println("没有找到合适的商品")
 			return
 		}
 		apiModel := ApiModel{authInfo.Token, TG_API, "sendMessage"}
@@ -463,7 +463,9 @@ func runScheduleJob() {
 
 	go func() {
 		<-ticker.C
-		SetNextRunTime(&job)
+		if job.At.IsZero() {
+			SetNextRunTime(&job)
+		}
 		if time.Now().After(job.At) {
 			SpyOnJdMiaosha()
 		}
@@ -480,7 +482,7 @@ var authInfo struct {
 func init() {
 	data, err := ioutil.ReadFile("config.env")
 	if err != nil {
-		fmt.Println("read config error", err)
+		log.Println("read config error", err)
 	}
 	// a=b \n c=d
 	// ["a=b", "c=d"]
@@ -493,7 +495,7 @@ func init() {
 	authInfo.Token = string(m["token"])
 	chatId, _ := strconv.ParseInt(string(m["chatId"]), 10, 64)
 	authInfo.ChatId = chatId
-	fmt.Println(authInfo)
+	log.Println(authInfo)
 }
 
 func main() {
@@ -502,7 +504,7 @@ func main() {
 	// 异步删除消息函数
 	go deleteAfterFewDuration()
 	// 定期去查 秒杀商品
-	go runScheduleJob()
+	go RunScheduleJob()
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
@@ -518,7 +520,7 @@ func deleteAfterFewDuration() {
 		client := clientWithWrapper()
 		res, err := client.Do(req)
 		if err != nil {
-			fmt.Printf("greet request:%s", err)
+			log.Printf("greet request:%s", err)
 		}
 		res.Body.Close()
 	}
