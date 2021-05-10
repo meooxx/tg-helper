@@ -429,6 +429,10 @@ func runScheduleJob() {
 			}
 			time.Sleep(1 * time.Second)
 		}
+		if len(groupSku) == 0 {
+			fmt.Println("没有找到合适的商品")
+			return
+		}
 		apiModel := ApiModel{authInfo.Token, TG_API, "sendMessage"}
 		text := "兄弟们,冲优惠2折和15元以下商品\n"
 		for _, item := range groupSku {
@@ -460,8 +464,7 @@ func runScheduleJob() {
 	go func() {
 		<-ticker.C
 		SetNextRunTime(&job)
-		// if time.Now().After(job.At) {
-		if true {
+		if time.Now().After(job.At) {
 			SpyOnJdMiaosha()
 		}
 	}()

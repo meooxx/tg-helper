@@ -15,8 +15,13 @@ jobs:
         uses: actions/checkout@v2
       - name: set up config.env
         env: 
-          CONFIG_ENV: ${{format('token={0}\nchatId={1}', secrets.TG_TOKEN, secrets.TG_CHAT_ID)}}
-        run: echo "$CONFIG_ENV" >> config.env
+          TOKEN: ${{format('token={0}', secrets.TG_TOKEN)}}
+          CHAT_ID: ${{format('chatId={0}', secrets.TG_CHAT_ID)}} 
+        run: |
+          echo "$TOKEN" >> config.env
+          echo "$CHAT_ID" >> config.env
+      - name: cat config.env
+        run: cat ./config.env
       - name: Deploy to App Engine
         id: deploy
         uses: google-github-actions/deploy-appengine@v0.2.0
