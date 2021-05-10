@@ -20,9 +20,9 @@ jobs:
       - name: ls 
         run: pwd && ls ./
         id: deploy
-              uses: google-github-actions/deploy-appengine@v0.2.0
-              with:
-                project_id: ${{ secrets.GAE_PROJECT_ID }}
-                credentials: ${{ secrets.GAE_PRIVATE_KEY }}
+          uses: google-github-actions/deploy-appengine@v0.2.0
+          with:
+            project_id: ${{ secrets.GAE_PROJECT_ID }}
+            credentials: ${{ secrets.GAE_PRIVATE_KEY }}
         - name: Show Output
           run: echo ${{ steps.deploy.outputs.url }}
