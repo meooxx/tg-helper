@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -449,7 +450,7 @@ func RunScheduleJob() {
 	// set up job
 	now := time.Now().In(local)
 	t := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, local)
-	log.Println("Now:",t.String())
+	log.Println("Now:", t.String())
 	// 一天俩次请求  7 点和 17 点
 	startTime := t.Add(7 * time.Hour)
 	deadlineTime := t.Add(17 * time.Hour)
@@ -517,7 +518,13 @@ func main() {
 	go deleteAfterFewDuration()
 	// 定期去查 秒杀商品
 	go RunScheduleJob()
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+		log.Printf("Defaulting to port %s", port)
+	}
+
+	log.Fatal(http.ListenAndServe(":" + port, nil))
 }
 
 // 延迟一段时间后删除 channel 里面的信息
