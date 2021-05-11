@@ -1,0 +1,9 @@
+cron:
+- description: "请求京东秒杀列表"
+  url: /runSchedule
+  schedule: every day 7:30
+  schedule: every day 15:30
+  schedule: every day 23:30
+
+  target: default
+  timezone: Asia/Shanghai

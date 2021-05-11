@@ -107,7 +107,7 @@ func SpyOnJdMiaosha() {
 		itemUrl := fmt.Sprintf("item\\.jd\\.com/%s\\.html", item.WareId)
 		escapedPrice := strings.Replace(item.MiaoShaPrice, ".", "\\.", 1)
 		// [18:00]xxx商品-价格-sku
-		text += fmt.Sprintf("[\\[%s\\]%s\\-%s元\\-%s](%s)\n", item.StartTimeShow, item.ShortWname, itemUrl, escapedPrice, item.WareId)
+		text += fmt.Sprintf("[\\[%s\\-%s元\\-%s\\]%s](%s)\n", item.StartTimeShow, escapedPrice, item.WareId, item.ShortWname, itemUrl)
 	}
 	sendTgMessage(apiModel, text, authInfo.ChatId)
 }
