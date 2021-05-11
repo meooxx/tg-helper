@@ -447,8 +447,9 @@ func RunScheduleJob() {
 	}
 
 	// set up job
-	now := time.Now()
-	t := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.Local)
+	now := time.Now().In(local)
+	t := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, local)
+	log.Println("Now:",t.String())
 	// 一天俩次请求  7 点和 17 点
 	startTime := t.Add(7 * time.Hour)
 	deadlineTime := t.Add(17 * time.Hour)
@@ -483,12 +484,18 @@ var authInfo struct {
 	Token  string
 	ChatId int64
 }
+var local *time.Location
 
 func init() {
 	data, err := ioutil.ReadFile("config.env")
 	if err != nil {
 		log.Println("read config error", err)
 	}
+	local, err = time.LoadLocation("Asia/Shanghai")
+	if err != nil {
+		log.Printf("init:加载时区失败")
+	}
+
 	// a=b \n c=d
 	// ["a=b", "c=d"]
 	tb := bytes.Fields(data)
@@ -500,7 +507,7 @@ func init() {
 	authInfo.Token = string(m["token"])
 	chatId, _ := strconv.ParseInt(string(m["chatId"]), 10, 64)
 	authInfo.ChatId = chatId
-	log.Println(authInfo)
+	log.Println("Parsed config.env:", authInfo)
 }
 
 func main() {
