@@ -64,36 +64,37 @@ func GetMiaoshaList(gid uint8) MiaoshaListJson {
 	req.Header.Add("user-agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.93 Safari/537.36")
 	client := clientWithWrapper()
 	res, err := client.Do(req)
+	var msList MiaoshaListJson
 	if err != nil {
 		log.Println("秒杀请求失败")
+		return msList
 	}
 	defer res.Body.Close()
 	body, _ := ioutil.ReadAll(res.Body)
 	// jsonp: `fn({});` -> `{}`
 	body = body[len("pcMiaoShaAreaList")+1 : len(body)-2]
-	var msList MiaoshaListJson
 	_ = json.Unmarshal(body, &msList)
 	return msList
 }
 
 // 监控秒杀信息
-func SpyOnJdMiaosha() {
+func SpyOnJdMiaosha(gids []uint8) {
 	defer func() {
 		if ok := recover(); ok != nil {
 			log.Println("recover from schedule job:", ok)
 		}
 	}()
 
-	miaosha := GetMiaoshaList(0)
 	groupSku := []Miaosha{}
-	goodsList := FilterGoods(miaosha.MiaoShaList, 15, 0.2)
-	groupSku = append(groupSku, goodsList...)
-	for _, g := range miaosha.Groups {
-		if fmt.Sprint(g.Gid) != miaosha.Gid {
-			miaosha = GetMiaoshaList(g.Gid)
-			goodsList = FilterGoods(miaosha.MiaoShaList, 15, 0.2)
-			groupSku = append(groupSku, goodsList...)
+	for _, g := range gids {
+
+		miaosha := GetMiaoshaList(g)
+		if miaosha == nil {
+			continue
 		}
+		goodsList := FilterGoods(miaosha.MiaoShaList, 15, 0.2)
+		groupSku = append(groupSku, goodsList...)
+
 		time.Sleep(1 * time.Second)
 	}
 	if len(groupSku) == 0 {

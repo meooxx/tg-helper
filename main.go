@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -351,7 +352,23 @@ func handleRunSchedule(w http.ResponseWriter, req *http.Request) {
 	isCron := req.Header.Get("X-Appengine-Cron")
 	if b, _ := strconv.ParseBool(isCron); b {
 		log.Print("Run job at:", time.Now().In(local).String())
-		go SpyOnJdMiaosha()
+		q := req.URL.Query()
+		gidsStr := q.Get("gids")
+		if gidsStr == "" {
+			log.Print("empty gids")
+			return
+		}
+		gidsArr := strings.Split(gidsStr, ",")
+		gids := []uint8{}
+		for _, v := range gidsArr {
+			gid64, _ := strconv.ParseInt(v, 10, 8)
+			if gid64 != 0 {
+				gids = append(gids, uint8(gid64))
+			}
+		}
+		if len(gids) != 0 {
+			go SpyOnJdMiaosha(gids)
+		}
 	} else {
 		w.WriteHeader(http.StatusForbidden)
 		w.Write([]byte("who are you stranger?"))
