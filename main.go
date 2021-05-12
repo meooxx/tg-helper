@@ -353,6 +353,7 @@ func handleRunSchedule(w http.ResponseWriter, req *http.Request) {
 	if b, _ := strconv.ParseBool(isCron); b {
 		log.Print("Run job at:", time.Now().In(local).String())
 		q := req.URL.Query()
+		log.Print(q)
 		gidsStr := q.Get("gids")
 		if gidsStr == "" {
 			log.Print("empty gids")
