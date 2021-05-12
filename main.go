@@ -307,12 +307,15 @@ func sendTgMessage(api ApiModel, text string, chatId int64) SendMessageResult {
 		log.Printf("%v", err)
 	}
 	defer res.Body.Close()
+	if !snr.Ok {
+		log.Println(string(by))
+	}
 	return snr
 }
 
 // 增加 Timeout 和 Proxy
 func clientWithWrapper() *http.Client {
-	return &http.Client{Timeout: 5 * time.Second, Transport: &http.Transport{Proxy: http.ProxyFromEnvironment}}
+	return &http.Client{Timeout: 10 * time.Second, Transport: &http.Transport{Proxy: http.ProxyFromEnvironment}}
 }
 
 // 待删除的 msg 请求参数
@@ -323,7 +326,23 @@ var authInfo struct {
 }
 var local *time.Location
 
+// "_" => "_", "\\_"
+var TGSpecialChartPairsPlacer *strings.Replacer
+
+// tg 特殊字符串
+var TgSpecialCharacters = []string{
+	"_", "*", "[", "]", "(", ")", "~", "`", ">", "#", "+", "-", "=", "|", "{", "}", ".", "!",
+}
+
+func GetTgSpecialCharPair(chars []string) []string {
+	r := []string{}
+	for _, c := range chars {
+		r = append(r, c, fmt.Sprintf("\\%s", c))
+	}
+	return r
+}
 func init() {
+	TGSpecialChartPairsPlacer = strings.NewReplacer(GetTgSpecialCharPair(TgSpecialCharacters)...)
 	data, err := ioutil.ReadFile("config.env")
 	if err != nil {
 		log.Println("read config error", err)

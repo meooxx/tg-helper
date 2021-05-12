@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
-	"strings"
 	"time"
 )
 
@@ -99,6 +98,12 @@ func SpyOnJdMiaosha(gids []uint8) {
 			continue
 		}
 		gid64, _ := strconv.ParseInt(miaosha.Gid, 10, 8)
+		if _, ok := gidData[uint8(gid64)]; ok {
+			continue
+		}
+		// 重复
+		// 1 重复原因 10:00 请求 8点结束点数据, 会返回 10点数据
+		// 2 11:00 请求 23：00 还没开始, 返回 11 点
 		gidData[uint8(gid64)] = miaosha
 		goodsList := FilterGoods(miaosha.MiaoShaList, 15, 0.2)
 		groupSku = append(groupSku, goodsList...)
@@ -114,9 +119,10 @@ func SpyOnJdMiaosha(gids []uint8) {
 	for _, item := range groupSku {
 		// markdown 转译. \., golang 转译 \\.
 		itemUrl := fmt.Sprintf("item\\.jd\\.com/%s\\.html", item.WareId)
-		escapedPrice := strings.Replace(item.MiaoShaPrice, ".", "\\.", 1)
+		escapedShortName := TGSpecialChartPairsPlacer.Replace(item.ShortWname)
+		escapedPrice := TGSpecialChartPairsPlacer.Replace(item.MiaoShaPrice)
 		// [18:00]xxx商品-价格-sku
-		text += fmt.Sprintf("[\\[%s\\-%s元\\-%s\\]%s](%s)\n", item.StartTimeShow, escapedPrice, item.WareId, item.ShortWname, itemUrl)
+		text += fmt.Sprintf("[\\[%s\\-%s元\\-%s\\]%s](%s)\n", item.StartTimeShow, escapedPrice, item.WareId, escapedShortName, itemUrl)
 	}
 	sendTgMessage(apiModel, text, authInfo.ChatId)
 }
