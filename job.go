@@ -86,12 +86,20 @@ func SpyOnJdMiaosha(gids []uint8) {
 	}()
 
 	groupSku := []Miaosha{}
+	gidData := map[uint8]MiaoshaListJson{}
 	for _, g := range gids {
-
-		miaosha := GetMiaoshaList(g)
-		if miaosha == nil {
+		// 重复
+		// 重复原因 10:00 请求 8点结束点数据, 会返回 10点数据
+		if _, ok := gidData[g]; ok {
 			continue
 		}
+		miaosha := GetMiaoshaList(g)
+		// 出错
+		if len(miaosha.MiaoShaList) == 0 {
+			continue
+		}
+		gid64, _ := strconv.ParseInt(miaosha.Gid, 10, 8)
+		gidData[uint8(gid64)] = miaosha
 		goodsList := FilterGoods(miaosha.MiaoShaList, 15, 0.2)
 		groupSku = append(groupSku, goodsList...)
 
