@@ -54,7 +54,7 @@ func GetMiaoshaList(gid uint8) MiaoshaListJson {
 	if gid == 0 {
 		v.Add("body", "{}")
 	} else {
-		v.Add("body", fmt.Sprintf("{gid:%d}", gid))
+		v.Add("body", fmt.Sprintf("{%q:%d}", "gid", gid))
 	}
 	v.Add("_", fmt.Sprint(time.Now().Unix()))
 	q := v.Encode()
