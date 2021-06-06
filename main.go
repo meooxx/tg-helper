@@ -19,7 +19,7 @@ const (
 	TEXT_MENTION = "text_mention"
 	// escaped '.', is requred by tg markdown -> '\.',
 	// escaped '\' , is required by go, so '\\.'
-	REPO            = "https://github\\.com/xxxXXX95/yuyue"
+	REPO            = "https://github\\.com/xxxXXX95/yuyue/tree/master"
 	COMMAND_REPO    = "/repo"
 	COMMAND_HELP    = "/help"
 	COMMAND_KICKOFF = "/kickoff"
