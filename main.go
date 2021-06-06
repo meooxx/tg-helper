@@ -197,24 +197,26 @@ func parseEntities(entities []MessageEntity, msg Message) map[string]*MentionedA
 	e := map[string]*MentionedAndFrom{}
 	var textMentioned *MentionedAndFrom
 	for _, entity := range entities {
-		len := entity.Length
+		length := entity.Length
 		offset := entity.Offset
+		// 处理汉字 转成 rune 再转成 string
+		entityName := string([]rune(msg.Text)[offset : length+offset])
 		switch entity.Type {
 		case BOT_COMMAND:
-			// 处理汉字 转成 rune 再转成 string
-			entityName := string([]rune(msg.Text)[offset : len+offset])
 			e[entityName] = &MentionedAndFrom{entity.User, msg.From, ""}
+		// @bot
 		case MENTION:
-			// 处理汉字 转成 rune 再转成 string
-			// entityName := string([]rune(msg.Text)[offset : len+offset])
-			e[AT_MYSELF] = &MentionedAndFrom{entity.User, msg.From, ""}
-			if textMentioned != nil {
-				textMentioned.From = msg.From
-				e[COMMAND_KICKOFF] = textMentioned
-				delete(e, AT_MYSELF)
+			if entityName == AT_MYSELF {
+				e[AT_MYSELF] = &MentionedAndFrom{entity.User, msg.From, ""}
+				if textMentioned != nil {
+					textMentioned.From = msg.From
+					e[COMMAND_KICKOFF] = textMentioned
+					delete(e, AT_MYSELF)
+				}
 			}
+		// @user
 		case TEXT_MENTION:
-			userName := string([]rune(msg.Text)[offset : len+offset])
+			userName := string([]rune(msg.Text)[offset : length+offset])
 			if _, ok := e[AT_MYSELF]; ok {
 				e[COMMAND_KICKOFF] = &MentionedAndFrom{entity.User, msg.From, userName}
 				delete(e, AT_MYSELF)
