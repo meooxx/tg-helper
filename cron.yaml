@@ -1,16 +1,19 @@
 cron:
-- description: "请求京东秒杀列表 7:30"
-  url: /runSchedule?gids=27,34,28,40
-  schedule: every day 07:30
+- description: "请求jd秒杀列表 9:30"
+  # 10  12  14 16
+  url: /runSchedule?gids=34,28,40,29
+  schedule: every day 09:30
   target: default
   timezone: Asia/Shanghai
-- description: "请求京东秒杀列表 15:30"
-  url: /runSchedule?gids=29,42,30,44
-  schedule: every day 15:30
+- description: "请求jd秒杀列表 17:30"
+  # 18 20 22
+  url: /runSchedule?gids=42,30,44
+  schedule: every day 17:30
   target: default
   timezone: Asia/Shanghai
-- description: "请求京东秒杀列表 21:30"
-  url: /runSchedule?gids=26,50
+- description: "请求jd秒杀列表 21:30"
+  #  24 6 8
+  url: /runSchedule?gids=26,50,27
   schedule: every day 21:30
   target: default
   timezone: Asia/Shanghai
