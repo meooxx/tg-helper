@@ -30,6 +30,10 @@ const (
 	// 管理员
 	ADMIN  = "administrator"
 	TG_API = "https://api.telegram.org/bot"
+	// 推送列表最大价格
+	MAX_PRICE = 30     
+	// 推送列表最低折扣
+	MIN_DISCOUNT = 0.3
 )
 
 type User struct {
@@ -65,8 +69,8 @@ type ChatMemberUpdated struct {
 
 type MessageEntity struct {
 	Type   string `json:"type"`
-	Offset uint8  `json:"offset"`
-	Length uint8  `json:"length"`
+	Offset int  `json:"offset"`
+	Length int  `json:"length"`
 	User   User   `json:"user"`
 }
 
