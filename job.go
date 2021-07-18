@@ -130,18 +130,18 @@ func SpyOnJdMiaosha(gids []uint8) {
 			// *******
 			// bold _italic_ bold
 			text += fmt.Sprintf("\n*_%s_*", TGSpecialChartPairsPlacer.Replace(item.StartTimeShow))
-			text += fmt.Sprintf("\n%s\n", TGSpecialChartPairsPlacer.Replace(strings.Repeat("*", 40)))
+			text += fmt.Sprintf("\n%s\n", TGSpecialChartPairsPlacer.Replace(strings.Repeat("*", 35)))
 			startTimeText = item.StartTimeShow
 		}
 		// markdown 转译. \., golang 转译 \\.
 		itemUrl := TGSpecialChartPairsPlacer.Replace(fmt.Sprintf("item.jd.com/%s.html", item.WareId))
 		// 标题加粗
-		escapedShortName := fmt.Sprintf("*%s*", TGSpecialChartPairsPlacer.Replace(item.ShortWname))
+		escapedShortName := TGSpecialChartPairsPlacer.Replace(item.ShortWname)
 		// escapedPrice := TGSpecialChartPairsPlacer.Replace(item.MiaoShaPrice)
 		// xx元/x折-skuId]
 		title := TGSpecialChartPairsPlacer.Replace(fmt.Sprintf("[%s元/%s折-%s]", item.MiaoShaPrice, item.discount, item.WareId))
 		// [18:00]name
-		text += fmt.Sprintf("[%s%s](%s)\n", title, escapedShortName, itemUrl)
+		text += fmt.Sprintf("[*%s*%s](%s)\n", title, escapedShortName, itemUrl)
 
 	}
 	sendTgMessageImpl(apiModel, SendMessageParam{
