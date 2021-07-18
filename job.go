@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -23,6 +24,8 @@ type Miaosha struct {
 	JdPrice       string `json:"jdPrice"`
 	MiaoShaPrice  string `json:"miaoShaPrice"`
 	StartTimeShow string `json:"startTimeShow"`
+	// 本地新增的参数 折数
+	discount string
 }
 type MiaoshaListJson struct {
 	Groups      []Group   `json:"groups"`
@@ -38,6 +41,8 @@ func FilterGoods(l []Miaosha, maxPrice float64, minDiscount float64) []Miaosha {
 		originPrice, _ := strconv.ParseFloat(good.JdPrice, 32)
 		discount := jdPrice / originPrice
 		if jdPrice < maxPrice || discount < minDiscount {
+			// 多少折
+			good.discount = fmt.Sprintf("%2.1f", discount*10)
 			r = append(r, good)
 		}
 	}
@@ -115,16 +120,33 @@ func SpyOnJdMiaosha(gids []uint8) {
 		return
 	}
 	apiModel := ApiModel{authInfo.Token, TG_API, "sendMessage"}
-	text := fmt.Sprintf("兄弟们, 冲优惠%.f折和%d元以下商品\n", MIN_DISCOUNT * 10, MAX_PRICE)
+	text := fmt.Sprintf("兄弟们, 冲优惠%.f折和%d元以下商品\n", MIN_DISCOUNT*10, MAX_PRICE)
+	startTimeText := ""
 	for _, item := range groupSku {
+		// 不同时间段 + 分割线
+		if startTimeText != item.StartTimeShow {
+			// markdown 分割线
+			// 时间段
+			// *******
+			// bold _italic_ bold
+			text += fmt.Sprintf("\n*_%s_*", TGSpecialChartPairsPlacer.Replace(item.StartTimeShow))
+			text += fmt.Sprintf("\n%s\n", TGSpecialChartPairsPlacer.Replace(strings.Repeat("*", 40)))
+			startTimeText = item.StartTimeShow
+		}
 		// markdown 转译. \., golang 转译 \\.
 		itemUrl := TGSpecialChartPairsPlacer.Replace(fmt.Sprintf("item.jd.com/%s.html", item.WareId))
-		escapedShortName := TGSpecialChartPairsPlacer.Replace(item.ShortWname)
+		// 标题加粗
+		escapedShortName := fmt.Sprintf("*%s*", TGSpecialChartPairsPlacer.Replace(item.ShortWname))
 		// escapedPrice := TGSpecialChartPairsPlacer.Replace(item.MiaoShaPrice)
-		// [18:00-xx元-skuId]
-		title := TGSpecialChartPairsPlacer.Replace(fmt.Sprintf("[%s-%s元-%s]", item.StartTimeShow, item.MiaoShaPrice, item.WareId))
+		// xx元/x折-skuId]
+		title := TGSpecialChartPairsPlacer.Replace(fmt.Sprintf("[%s元/%s折-%s]", item.MiaoShaPrice, item.discount, item.WareId))
 		// [18:00]name
 		text += fmt.Sprintf("[%s%s](%s)\n", title, escapedShortName, itemUrl)
+
 	}
-	sendTgMessage(apiModel, text, authInfo.ChatId)
+	sendTgMessageImpl(apiModel, SendMessageParam{
+		ChatId:            authInfo.ChatId,
+		Text:              text,
+		DisableWebPreview: true,
+	})
 }
