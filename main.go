@@ -174,9 +174,10 @@ type ApiModel struct {
 
 // send a message should set these field
 type SendMessageParam struct {
-	ChatId    int64  `json:"chat_id"`
-	Text      string `json:"text"`
-	ParseMode string `json:"parse_mode"`
+	ChatId            int64  `json:"chat_id"`
+	Text              string `json:"text"`
+	ParseMode         string `json:"parse_mode"`
+	DisableWebPreview bool   `json:"disable_web_page_preview"`
 }
 
 // 用于删除用户,回复 @用户
@@ -285,9 +286,11 @@ type SendMessageResult struct {
 	Result Message `json:"result"`
 }
 
-func sendTgMessage(api ApiModel, text string, chatId int64) SendMessageResult {
-	api.Method = "sendMessage"
-	param := SendMessageParam{ChatId: chatId, Text: text, ParseMode: "MarkdownV2"}
+func sendTgMessageImpl(api ApiModel, param SendMessageParam) SendMessageResult {
+	// 默认 MarkdownV2
+	if param.ParseMode == "" {
+		param.ParseMode = "MarkdownV2"
+	}
 	jsonByte, err := json.Marshal(param)
 	if err != nil {
 		log.Printf("SendMessageParam stringify: %s", err)
@@ -317,6 +320,12 @@ func sendTgMessage(api ApiModel, text string, chatId int64) SendMessageResult {
 		log.Println(string(by))
 	}
 	return snr
+}
+
+func sendTgMessage(api ApiModel, text string, chatId int64) SendMessageResult {
+	api.Method = "sendMessage"
+	param := SendMessageParam{ChatId: chatId, Text: text, ParseMode: "MarkdownV2"}
+	return sendTgMessageImpl(api, param)
 }
 
 // 增加 Timeout 和 Proxy
