@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -34,6 +35,8 @@ const (
 	MAX_PRICE = 30
 	// 推送列表最低折扣
 	MIN_DISCOUNT = 0.3
+	// 最大text长度 4096 Marshal 后保险为3000
+	MAX_TEXT_LENGTH = 3500
 )
 
 type User struct {
@@ -317,7 +320,7 @@ func sendTgMessageImpl(api ApiModel, param SendMessageParam) SendMessageResult {
 	}
 	defer res.Body.Close()
 	if !snr.Ok {
-		log.Println(string(by))
+		log.Println(errors.New(string(by)))
 	}
 	return snr
 }
@@ -366,7 +369,7 @@ func init() {
 	if err != nil {
 		log.Printf("init:加载时区失败")
 	}
-
+	log.SetFlags(log.Ldate | log.Lshortfile | log.Ltime)
 	// a=b \n c=d
 	// ["a=b", "c=d"]
 	tb := bytes.Fields(data)
@@ -385,7 +388,7 @@ func init() {
 func handleRunSchedule(w http.ResponseWriter, req *http.Request) {
 	isCron := req.Header.Get("X-Appengine-Cron")
 	if b, _ := strconv.ParseBool(isCron); b {
-		log.Print("Run job at:", time.Now().In(local).String())
+		log.Print("Run the job ")
 		q := req.URL.Query()
 		log.Print(q)
 		gidsStr := q.Get("gids")

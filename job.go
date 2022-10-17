@@ -141,8 +141,15 @@ func SpyOnJdMiaosha(gids []uint8) {
 		// xx元/x折-skuId]
 		title := TGSpecialChartPairsPlacer.Replace(fmt.Sprintf("[%s元/%s折-%s]", item.MiaoShaPrice, item.discount, item.WareId))
 		// [18:00]name
-		text += fmt.Sprintf("[*%s*%s](%s)\n", title, escapedShortName, itemUrl)
-
+		formatText := fmt.Sprintf("[*%s*%s](%s)\n", title, escapedShortName, itemUrl)
+		if len(text+formatText) > MAX_TEXT_LENGTH {
+			sendTgMessageImpl(apiModel, SendMessageParam{
+				ChatId:            authInfo.ChatId,
+				Text:              text,
+				DisableWebPreview: true,
+			})
+			text = "接上一条\n" + formatText
+		}
 	}
 	sendTgMessageImpl(apiModel, SendMessageParam{
 		ChatId:            authInfo.ChatId,
