@@ -149,6 +149,8 @@ func SpyOnJdMiaosha(gids []uint8) {
 				DisableWebPreview: true,
 			})
 			text = "接上一条\n" + formatText
+		} else {
+			text += formatText
 		}
 	}
 	sendTgMessageImpl(apiModel, SendMessageParam{
