@@ -31,7 +31,7 @@ const (
 	ADMIN  = "administrator"
 	TG_API = "https://api.telegram.org/bot"
 	// 推送列表最大价格
-	MAX_PRICE = 30     
+	MAX_PRICE = 30
 	// 推送列表最低折扣
 	MIN_DISCOUNT = 0.3
 )
@@ -69,8 +69,8 @@ type ChatMemberUpdated struct {
 
 type MessageEntity struct {
 	Type   string `json:"type"`
-	Offset int  `json:"offset"`
-	Length int  `json:"length"`
+	Offset int    `json:"offset"`
+	Length int    `json:"length"`
 	User   User   `json:"user"`
 }
 
@@ -132,7 +132,7 @@ func handleUpdate(w http.ResponseWriter, r *http.Request) {
 
 	// for new User
 	if len(metionNames) != 0 {
-		text := fmt.Sprintf("hello%s, 需要帮助请输入'/'获取机器人命令", metionNames)
+		text := fmt.Sprintf("hello%s, 需要帮助请输入'/'获取机器人命令,如'%s'获取仓库地址", metionNames, COMMAND_REPO)
 		sendTgMessage(apiModel, text, chat.Id)
 		return
 	}
